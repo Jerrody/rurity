@@ -1,4 +1,5 @@
 #![deny(unsafe_op_in_unsafe_fn)]
+#![deny(unstable_features)]
 
 use erupt::vk;
 use raw_window_handle::HasRawWindowHandle;

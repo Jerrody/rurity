@@ -1,3 +1,6 @@
+#![deny(unsafe_op_in_unsafe_fn)]
+#![deny(unstable_features)]
+
 use engine::Engine;
 use winit::event::{Event, KeyboardInput, WindowEvent};
 
