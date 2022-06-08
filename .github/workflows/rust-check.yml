@@ -17,22 +17,23 @@ jobs:
 
       - name: check
         run: cargo check --all-targets --all-features --verbose
-        continue-on-error: true
-      - name: clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-        continue-on-error: true
+        continue-on-error: false
       - name: test
         run: cargo test --verbose
-        continue-on-error: true
-      - name: rustfmt
-        run: cargo fmt -- --check
-        continue-on-error: true
+        continue-on-error: false
       - name: miri
         run: |
             rustup toolchain install nightly --component miri
             rustup override set nightly
             cargo miri setup
             cargo miri test
+        continue-on-error: false
+      - name: clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+        continue-on-error: false
+      - name: rustfmt
+        run: cargo fmt -- --check
+        continue-on-error: false
 
   windows:
     runs-on: windows-latest
@@ -41,22 +42,23 @@ jobs:
 
       - name: check
         run: cargo check --all-targets --all-features --verbose
-        continue-on-error: true
-      - name: clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-        continue-on-error: true
+        continue-on-error: false
       - name: test
         run: cargo test --verbose
-        continue-on-error: true
-      - name: rustfmt
-        run: cargo fmt -- --check
-        continue-on-error: true
+        continue-on-error: false
       - name: miri
         run: |
             rustup toolchain install nightly --component miri
             rustup override set nightly
             cargo miri setup
             cargo miri test
+        continue-on-error: false
+      - name: clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+        continue-on-error: false
+      - name: rustfmt
+        run: cargo fmt -- --check
+        continue-on-error: false
 
   macos:
     runs-on: macos-latest
@@ -65,19 +67,20 @@ jobs:
 
       - name: check
         run: cargo check --all-targets --all-features --verbose
-        continue-on-error: true
-      - name: clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-        continue-on-error: true
+        continue-on-error: false
       - name: test
         run: cargo test --verbose
-        continue-on-error: true
-      - name: rustfmt
-        run: cargo fmt -- --check
-        continue-on-error: true
+        continue-on-error: false
       - name: miri
         run: |
             rustup toolchain install nightly --component miri
             rustup override set nightly
             cargo miri setup
             cargo miri test
+        continue-on-error: false
+      - name: clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+        continue-on-error: false
+      - name: rustfmt
+        run: cargo fmt -- --check
+        continue-on-error: false
