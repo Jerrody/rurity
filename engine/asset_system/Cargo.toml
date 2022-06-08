@@ -1,0 +1,11 @@
+[package]
+name = "asset_system"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+ron = "0.7"
+serde = "1.0"
+lz4 = "1.23.3"
+bytes = "1.1"

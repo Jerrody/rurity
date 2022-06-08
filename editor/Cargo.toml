@@ -1,0 +1,16 @@
+[package]
+name = "rurity"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+winit = "0.26.1"
+engine = { package = "rurity_engine", path = "../engine/" }
+
+[features]
+no_log = ["engine/no_log"]
+log = ["engine/log"]
+
+[profile.release]
+lto = true
+codegen-units = 1
