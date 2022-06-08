@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 use std::io::{Read, Write};
 
 #[repr(u8)]
@@ -31,7 +33,7 @@ impl AssetFile {
                     }
                 })?;
 
-        // TODO: Find the way to fix these `if let`.
+        // TODO: Make it more pretty.
         if let Err(e) = asset_file.write(&self.version.to_le_bytes()) {
             return Err(e.to_string());
         }

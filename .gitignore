@@ -1,2 +1,5 @@
 **/target/
 **/Cargo.lock
+/engine/logs/
+fleet.toml
+.cargo

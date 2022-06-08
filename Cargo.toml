@@ -1,2 +1,8 @@
 [workspace]
 members = ["editor", "engine"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "s"
+strip = true
