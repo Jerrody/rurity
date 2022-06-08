@@ -30,7 +30,7 @@ jobs:
         uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af #@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly
           components: clippy
           override: true
 
@@ -40,9 +40,10 @@ jobs:
       - name: Run rust-clippy
         run:
           cargo clippy
-          -- -D warnings
+          --all-targets
           --all-features
           --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+          -- -D warnings
         continue-on-error: false
 
       - name: Upload analysis results to GitHub
