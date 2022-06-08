@@ -17,12 +17,16 @@ jobs:
 
       - name: check
         run: cargo check --all-targets --all-features --verbose
+        continue-on-error: true
       - name: clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
+        continue-on-error: true
       - name: test
         run: cargo test --verbose
+        continue-on-error: true
       - name: rustfmt
         run: cargo fmt -- --check
+        continue-on-error: true
       - name: miri
         run: |
             rustup toolchain install nightly --component miri
@@ -37,12 +41,16 @@ jobs:
 
       - name: check
         run: cargo check --all-targets --all-features --verbose
+        continue-on-error: true
       - name: clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
+        continue-on-error: true
       - name: test
         run: cargo test --verbose
+        continue-on-error: true
       - name: rustfmt
         run: cargo fmt -- --check
+        continue-on-error: true
       - name: miri
         run: |
             rustup toolchain install nightly --component miri
@@ -57,12 +65,16 @@ jobs:
 
       - name: check
         run: cargo check --all-targets --all-features --verbose
+        continue-on-error: true
       - name: clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
+        continue-on-error: true
       - name: test
         run: cargo test --verbose
+        continue-on-error: true
       - name: rustfmt
         run: cargo fmt -- --check
+        continue-on-error: true
       - name: miri
         run: |
             rustup toolchain install nightly --component miri
