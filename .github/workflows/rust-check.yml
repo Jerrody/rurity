@@ -23,6 +23,13 @@ jobs:
         run: cargo test --verbose
       - name: rustfmt
         run: cargo fmt -- --check
+      - name: miri
+        run: |
+            rustup toolchain install nightly --component miri
+            rustup override set nightly
+            cargo miri setup
+            cargo miri test
+
   windows:
     runs-on: windows-latest
     steps:
@@ -36,6 +43,13 @@ jobs:
         run: cargo test --verbose
       - name: rustfmt
         run: cargo fmt -- --check
+      - name: miri
+        run: |
+            rustup toolchain install nightly --component miri
+            rustup override set nightly
+            cargo miri setup
+            cargo miri test
+
   macos:
     runs-on: macos-latest
     steps:
@@ -49,3 +63,9 @@ jobs:
         run: cargo test --verbose
       - name: rustfmt
         run: cargo fmt -- --check
+      - name: miri
+        run: |
+            rustup toolchain install nightly --component miri
+            rustup override set nightly
+            cargo miri setup
+            cargo miri test
