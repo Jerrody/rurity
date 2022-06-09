@@ -65,7 +65,7 @@ mod tests {
 
     const FILE_PATH: &str = r"C:\rust\rurity\engine\asset_system\src\asset_file.bin";
     const CONTENT_OF_ASSET_FILE: &str =
-        "(asset_type:Mesh,version:1,metadata:\"HI\",raw_data:[1,2,3])";
+        "(asset_type:Mesh,version:\"0.1.0\",metadata:\"HI\",raw_data:[1,2,3])";
 
     #[test]
     #[cfg_attr(miri, ignore)]
