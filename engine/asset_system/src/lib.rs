@@ -1,24 +1,28 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 #![deny(unstable_features)]
 
-use std::io::{Read, Write};
+use serde::{Deserialize, Serialize};
+use std::io::Read;
 
+#[derive(Debug, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum AssetType {
     Mesh = 0,
     Texture = 1,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AssetFile {
     asset_type: AssetType,
-    version: u32,
+    version: String,
     metadata: String,
     raw_data: Vec<u8>,
 }
 
 impl AssetFile {
-    fn save_asset_file(&self, path: &impl AsRef<std::path::Path>) -> Result<(), String> {
+    pub fn save_asset_file(&self, path: &impl AsRef<std::path::Path>) -> Result<(), String> {
         use std::fs::File;
+
         let mut asset_file =
             File::options()
                 .write(true)
@@ -34,24 +38,11 @@ impl AssetFile {
                     }
                 })?;
 
-        // TODO: Make it more pretty.
-        if let Err(e) = asset_file.write(&self.version.to_le_bytes()) {
-            return Err(e.to_string());
-        }
-        if let Err(e) = asset_file.write(&self.metadata.as_bytes()) {
-            return Err(e.to_string());
-        }
-        if let Err(e) = asset_file.write(&self.raw_data) {
-            return Err(e.to_string());
-        }
-
-        Ok(())
+        Ok(ron::ser::to_writer(&mut asset_file, &self).map_err(|err| err.to_string())?)
     }
 
-    fn load_asset_file(&mut self, path: &str) -> Result<(), String> {
-        use bytes::Buf;
+    pub fn load_asset_file(path: &str) -> Result<AssetFile, String> {
         use std::fs::File;
-        use std::mem::{size_of, size_of_val};
 
         let mut asset_file = File::options()
             .write(false)
@@ -61,14 +52,46 @@ impl AssetFile {
                 let e = format!("Error: Failed to save an asset file: {:?}", e.kind());
                 Err(e)
             })?;
-        let mut data = vec![];
-        if let Err(e) = asset_file.read_to_end(&mut data) {
-            return Err(e.to_string());
-        }
 
-        let mut bytes_representation = bytes::Bytes::from(data);
-        let file_type = bytes_representation.copy_to_bytes(size_of_val(&self.version));
+        let mut raw_data = String::new();
+        asset_file
+            .read_to_string(&mut raw_data)
+            .map_err(|e| e.to_string())?;
 
-        Ok(())
+        let asset_file = ron::de::from_bytes(&raw_data.as_bytes()).map_err(|e| e.to_string())?;
+
+        Ok(asset_file)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const FILE_PATH: &str = r"C:\rust\rurity\engine\asset_system\src\asset_file.bin";
+    const CONTENT_OF_ASSET_FILE: &str =
+        "(asset_type:Mesh,version:1,metadata:\"HI\",raw_data:[1,2,3])";
+
+    #[test]
+    fn save_asset_file() {
+        let asset_file = AssetFile {
+            asset_type: AssetType::Mesh,
+            version: "0.1.0".to_string(),
+            metadata: "HI".to_string(),
+            raw_data: vec![1, 2, 3],
+        };
+
+        asset_file.save_asset_file(&FILE_PATH).unwrap();
+    }
+
+    #[test]
+    fn laod_asset_file() {
+        let asset_file = AssetFile::load_asset_file(&FILE_PATH).unwrap();
+
+        assert_eq!(
+            &ron::to_string(&asset_file).unwrap(),
+            CONTENT_OF_ASSET_FILE,
+            "Content of the loaded asset file doesn't correspond with expected content."
+        );
     }
 }

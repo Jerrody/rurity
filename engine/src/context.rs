@@ -69,6 +69,7 @@ impl Context {
             .collect::<Vec<_>>();
         check_support(&required_instance_layers, &instance_layer_names).unwrap();
 
+        // FIXME: Removing `mut` causes compile-time error.
         let mut required_instance_extensions =
             erupt::utils::surface::enumerate_required_extensions(window).result()?;
         let instance_extensions = unsafe {

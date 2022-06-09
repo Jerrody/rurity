@@ -6,6 +6,5 @@ publish = false
 
 [dependencies]
 ron = "0.7"
-serde = "1.0"
+serde = { version = "1", features = ["derive"] }
 lz4 = "1.23.3"
-bytes = "1.1"
