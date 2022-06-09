@@ -54,6 +54,10 @@ impl Context {
             !(cfg!(feature = "log") && cfg!(feature = "no_log")),
             "Error: Cannot be enabeld at the same time `log` and `no_log` features!"
         );
+        assert!(
+            cfg!(feature = "no_log") || cfg!(feature = "log"),
+            "Error: Should be enabled `no_log` or `log` feature!"
+        );
 
         //* INSTANCE
         //* =======================================================================================================================
@@ -147,7 +151,7 @@ impl Context {
             Some(instance) => instance,
             None => {
                 let e =
-                    "Error: Failed to initialize an Instance. Please, check the enabled features.";
+                    "Error: Failed to initialize an Instance. Please, check the enabled features!";
 
                 error!("{e}"); // Using `error!` for the recording in the logs.
                 panic!("{e}");
@@ -343,7 +347,7 @@ impl Context {
             Some(device) => device,
             None => {
                 let e =
-                    "Error: Failed to initialize a DeviceLoader. Please, check the enabled features.";
+                    "Error: Failed to initialize a DeviceLoader. Please, check the enabled features!";
 
                 error!("{e}"); // Using `error!` for the recording in the logs.
                 panic!("{e}");
