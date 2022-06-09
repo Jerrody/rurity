@@ -68,6 +68,7 @@ mod tests {
         "(asset_type:Mesh,version:1,metadata:\"HI\",raw_data:[1,2,3])";
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn save_asset_file() {
         let asset_file = AssetFile {
             asset_type: AssetType::Mesh,
@@ -80,6 +81,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn laod_asset_file() {
         let asset_file = AssetFile::load_asset_file(&FILE_PATH).unwrap();
 
