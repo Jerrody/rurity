@@ -20,7 +20,10 @@ pub struct AssetFile {
 }
 
 impl AssetFile {
-    pub fn save_asset_file(&self, path: &impl AsRef<std::path::Path>) -> Result<(), String> {
+    pub fn save_asset_file<T: AsRef<std::path::Path> + ?Sized>(
+        &self,
+        path: &T,
+    ) -> Result<(), String> {
         use std::fs::File;
 
         let mut asset_file =
@@ -63,7 +66,7 @@ impl AssetFile {
 mod tests {
     use super::*;
 
-    const FILE_PATH: &str = r"C:\rust\rurity\engine\asset_system\src\asset_file.bin";
+    const FILE_PATH: &str = "../src/asset_file.bin";
     const CONTENT_OF_ASSET_FILE: &str =
         "(asset_type:Mesh,version:\"0.1.0\",metadata:\"HI\",raw_data:[1,2,3])";
 
@@ -77,13 +80,13 @@ mod tests {
             raw_data: vec![1, 2, 3],
         };
 
-        asset_file.save_asset_file(&FILE_PATH).unwrap();
+        asset_file.save_asset_file(FILE_PATH).unwrap();
     }
 
     #[test]
     #[cfg_attr(miri, ignore)]
     fn laod_asset_file() {
-        let asset_file = AssetFile::load_asset_file(&FILE_PATH).unwrap();
+        let asset_file = AssetFile::load_asset_file(FILE_PATH).unwrap();
 
         assert_eq!(
             &ron::to_string(&asset_file).unwrap(),
