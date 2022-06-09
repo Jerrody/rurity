@@ -50,8 +50,10 @@ impl Context {
         width: u32,
         height: u32,
     ) -> Result<Self, vk::Result> {
-        #[cfg(all(feature = "no_log", feature = "log"))]
-        panic!("Error: Cannot be enabeld at the same time `log` and `no_log` features!");
+        assert!(
+            !(cfg!(feature = "log") && cfg!(feature = "no_log")),
+            "Error: Cannot be enabeld at the same time `log` and `no_log` features!"
+        );
 
         //* INSTANCE
         //* =======================================================================================================================
