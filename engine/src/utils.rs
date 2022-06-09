@@ -1,5 +1,5 @@
 pub mod context {
-    #[cfg(not(feature = "no_log"))]
+    #[cfg(feature = "log")]
     use erupt::vk;
     use std::ffi::CStr;
 
@@ -43,7 +43,7 @@ pub mod context {
         }
     }
 
-    #[cfg(not(feature = "no_log"))]
+    #[cfg(feature = "log")]
     pub unsafe extern "system" fn debug_callback(
         message_severity: vk::DebugUtilsMessageSeverityFlagBitsEXT,
         message_types: vk::DebugUtilsMessageTypeFlagsEXT,
