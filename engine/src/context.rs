@@ -1,8 +1,11 @@
 use super::utils::context::check_support;
-use erupt::{cstr, vk, ExtendableFrom};
+#[cfg(all(not(feature = "no_log"), feature = "log"))]
+use erupt::cstr;
+use erupt::{vk, ExtendableFrom};
 use raw_window_handle::HasRawWindowHandle;
 use smallvec::SmallVec;
 use std::ffi::{CStr, CString};
+use tracing::error;
 
 const TRIANGLE_VERT: &[u8] = include_bytes!("../shaders/triangle.vert.spv");
 const TRIANGLE_FRAG: &[u8] = include_bytes!("../shaders/triangle.frag.spv");
@@ -26,13 +29,16 @@ pub struct Context {
 
     pub graphics_queue: vk::Queue,
     pub device: erupt::DeviceLoader,
-    physical_device: vk::PhysicalDevice,
-    #[allow(unused_variables)]
-    physical_device_properties: vk::PhysicalDeviceProperties,
+    _physical_device: vk::PhysicalDevice,
+    _physical_device_properties: vk::PhysicalDeviceProperties,
 
-    surface_format: vk::SurfaceFormatKHR,
+    _surface_format: vk::SurfaceFormatKHR,
     surface: vk::SurfaceKHR,
 
+    #[cfg(all(
+        any(feature = "no_log", feature = "log"),
+        not(all(feature = "no_log", feature = "log"))
+    ))]
     debug_messenger: Option<vk::DebugUtilsMessengerEXT>,
     instance: erupt::InstanceLoader,
     _entry: erupt::EntryLoader,
@@ -44,13 +50,28 @@ impl Context {
         width: u32,
         height: u32,
     ) -> Result<Self, vk::Result> {
+        #[cfg(all(feature = "no_log", feature = "log"))]
+        panic!("Error: Cannot be enabeld at the same time `log` and `no_log` features!");
+
         //* INSTANCE
         //* =======================================================================================================================
         let entry = erupt::EntryLoader::new().unwrap();
 
+        #[cfg(all(
+            any(feature = "no_log", feature = "log"),
+            not(all(feature = "no_log", feature = "log"))
+        ))]
         let application_name = CString::new("Rurity Editor").unwrap();
+        #[cfg(all(
+            any(feature = "no_log", feature = "log"),
+            not(all(feature = "no_log", feature = "log"))
+        ))]
         let engine_name = CString::new("Rurity").unwrap();
 
+        #[cfg(all(
+            any(feature = "no_log", feature = "log"),
+            not(all(feature = "no_log", feature = "log"))
+        ))]
         let application_info = vk::ApplicationInfoBuilder::new()
             .application_name(&application_name)
             .application_version(vk::make_api_version(0, 0, 1, 0))
@@ -58,41 +79,82 @@ impl Context {
             .engine_version(vk::make_api_version(0, 0, 1, 0))
             .api_version(vk::API_VERSION_1_3);
 
-        #[cfg(any(feature = "no_log", not(feature = "log")))]
-        let required_instance_layers: [*const i8; 0] = [];
-        #[cfg(all(not(feature = "no_log"), feature = "log"))]
-        let required_instance_layers = [cstr!("VK_LAYER_KHRONOS_validation")];
-        let instance_layers = unsafe { entry.enumerate_instance_layer_properties(None).result()? };
-        let instance_layer_names = instance_layers
-            .iter()
-            .map(|layer_property| layer_property.layer_name.as_ptr())
-            .collect::<Vec<_>>();
-        check_support(&required_instance_layers, &instance_layer_names).unwrap();
+        #[allow(unused_mut, unused_assignments)]
+        let mut instance: Option<erupt::InstanceLoader> = None;
+        #[cfg(all(feature = "no_log", not(feature = "log")))]
+        {
+            let instance_extensions = unsafe {
+                entry
+                    .enumerate_instance_extension_properties(None, None)
+                    .result()?
+            };
+            let instance_extensions_names = instance_extensions
+                .iter()
+                .map(|extension_property| extension_property.extension_name.as_ptr())
+                .collect::<Vec<_>>();
 
-        // FIXME: Removing `mut` causes compile-time error.
-        let mut required_instance_extensions =
-            erupt::utils::surface::enumerate_required_extensions(window).result()?;
-        let instance_extensions = unsafe {
-            entry
-                .enumerate_instance_extension_properties(None, None)
-                .result()?
+            let required_instance_extensions =
+                erupt::utils::surface::enumerate_required_extensions(window).result()?;
+            check_support(&required_instance_extensions, &instance_extensions_names).unwrap();
+
+            let instance_info = vk::InstanceCreateInfoBuilder::new()
+                .application_info(&application_info)
+                .enabled_extension_names(&required_instance_extensions);
+
+            instance = Some(unsafe { erupt::InstanceLoader::new(&entry, &instance_info).unwrap() });
+        }
+
+        #[cfg(all(not(feature = "no_log"), feature = "log"))]
+        {
+            // Layers
+            let instance_layers =
+                unsafe { entry.enumerate_instance_layer_properties(None).result()? };
+            let instance_layer_names = instance_layers
+                .iter()
+                .map(|layer_property| layer_property.layer_name.as_ptr())
+                .collect::<Vec<_>>();
+
+            let required_instance_layers = [cstr!("VK_LAYER_KHRONOS_validation")];
+            check_support(&required_instance_layers, &instance_layer_names).unwrap();
+
+            // Extensions
+            let instance_extensions = unsafe {
+                entry
+                    .enumerate_instance_extension_properties(None, None)
+                    .result()?
+            };
+            let instance_extensions_names = instance_extensions
+                .iter()
+                .map(|extension_property| extension_property.extension_name.as_ptr())
+                .collect::<Vec<_>>();
+
+            let mut required_instance_extensions =
+                erupt::utils::surface::enumerate_required_extensions(window).result()?;
+            required_instance_extensions.push(vk::EXT_DEBUG_UTILS_EXTENSION_NAME);
+            check_support(&required_instance_extensions, &instance_extensions_names).unwrap();
+
+            let instance_info = vk::InstanceCreateInfoBuilder::new()
+                .application_info(&application_info)
+                .enabled_layer_names(&required_instance_layers)
+                .enabled_extension_names(&required_instance_extensions);
+
+            instance = Some(unsafe { erupt::InstanceLoader::new(&entry, &instance_info).unwrap() });
+        }
+
+        let instance = match instance {
+            Some(instance) => instance,
+            None => {
+                let e =
+                    "Error: Failed to initialize an Instance. Please, check the enabled features.";
+
+                error!("{e}"); // Using `error!` for the recording in the logs.
+                panic!("{e}");
+            }
         };
-        let instance_extensions_names = instance_extensions
-            .iter()
-            .map(|extension_property| extension_property.extension_name.as_ptr())
-            .collect::<Vec<_>>();
-        #[cfg(all(not(feature = "no_log"), feature = "log"))]
-        required_instance_extensions.push(vk::EXT_DEBUG_UTILS_EXTENSION_NAME);
-        check_support(&required_instance_extensions, &instance_extensions_names).unwrap();
 
-        let instance_info = vk::InstanceCreateInfoBuilder::new()
-            .application_info(&application_info)
-            .enabled_layer_names(&required_instance_layers)
-            .enabled_extension_names(&required_instance_extensions);
-        let instance = unsafe { erupt::InstanceLoader::new(&entry, &instance_info).unwrap() };
-
-        #[cfg(any(feature = "no_log", not(feature = "log")))]
+        #[cfg(all(feature = "no_log", not(feature = "log")))]
         let debug_messenger = None;
+
         #[cfg(all(not(feature = "no_log"), feature = "log"))]
         let debug_messenger_info = vk::DebugUtilsMessengerCreateInfoEXT {
             message_severity: vk::DebugUtilsMessageSeverityFlagsEXT::ERROR_EXT
@@ -119,10 +181,9 @@ impl Context {
 
         let required_device_extensions = [vk::KHR_SWAPCHAIN_EXTENSION_NAME];
 
-        #[cfg(any(feature = "no_log", not(feature = "log")))]
-        let required_device_layers: [*const i8; 0] = [];
         #[cfg(all(not(feature = "no_log"), feature = "log"))]
         let required_device_layers = [cstr!("VK_LAYER_KHRONOS_validation")];
+
         let physical_devices = unsafe { instance.enumerate_physical_devices(None).result()? };
         let (
             physical_device,
@@ -174,15 +235,18 @@ impl Context {
                     })
                     .unwrap_or_else(|| surface_formats.remove(0));
 
-                let device_layers = instance
-                    .enumerate_device_layer_properties(physical_device, None)
-                    .unwrap();
-                let device_layer_names = device_layers
-                    .iter()
-                    .map(|layer_property| layer_property.layer_name.as_ptr())
-                    .collect::<Vec<_>>();
-                if check_support(&required_device_layers, &device_layer_names).is_err() {
-                    return None;
+                #[cfg(all(not(feature = "no_log"), feature = "log"))]
+                {
+                    let device_layers = instance
+                        .enumerate_device_layer_properties(physical_device, None)
+                        .unwrap();
+                    let device_layer_names = device_layers
+                        .iter()
+                        .map(|layer_property| layer_property.layer_name.as_ptr())
+                        .collect::<Vec<_>>();
+                    if check_support(&required_device_layers, &device_layer_names).is_err() {
+                        return None;
+                    }
                 }
 
                 let device_extensions = instance
@@ -218,25 +282,71 @@ impl Context {
             )
             .expect("Error: Failed to find a suitable device.");
 
+        #[cfg(all(
+            any(feature = "no_log", feature = "log"),
+            not(all(feature = "no_log", feature = "log"))
+        ))]
         let queue_infos = [vk::DeviceQueueCreateInfoBuilder::new()
             .queue_family_index(queue_family_index)
             .queue_priorities(&[1.0])];
 
+        #[cfg(all(
+            any(feature = "no_log", feature = "log"),
+            not(all(feature = "no_log", feature = "log"))
+        ))]
         let mut dynamic_rendering =
             vk::PhysicalDeviceDynamicRenderingFeaturesKHRBuilder::new().dynamic_rendering(true);
+        #[cfg(all(
+            any(feature = "no_log", feature = "log"),
+            not(all(feature = "no_log", feature = "log"))
+        ))]
         let mut sync_2 =
             vk::PhysicalDeviceSynchronization2FeaturesKHRBuilder::new().synchronization2(true);
+        #[cfg(all(
+            any(feature = "no_log", feature = "log"),
+            not(all(feature = "no_log", feature = "log"))
+        ))]
         let mut device_features = vk::PhysicalDeviceFeatures2KHRBuilder::new()
             .extend_from(&mut dynamic_rendering)
             .extend_from(&mut sync_2);
-        let device_info = vk::DeviceCreateInfoBuilder::new()
-            .enabled_extension_names(&required_device_extensions)
-            .enabled_layer_names(&required_device_layers)
-            .queue_create_infos(&queue_infos)
-            .extend_from(&mut device_features);
 
-        let device =
-            unsafe { erupt::DeviceLoader::new(&instance, physical_device, &device_info).unwrap() };
+        #[allow(unused_mut, unused_assignments)]
+        let mut device: Option<erupt::DeviceLoader> = None;
+        #[cfg(all(feature = "no_log", not(feature = "log")))]
+        {
+            let device_info = vk::DeviceCreateInfoBuilder::new()
+                .enabled_extension_names(&required_device_extensions)
+                .queue_create_infos(&queue_infos)
+                .extend_from(&mut device_features);
+
+            device = Some(unsafe {
+                erupt::DeviceLoader::new(&instance, physical_device, &device_info).unwrap()
+            });
+        }
+
+        #[cfg(all(not(feature = "no_log"), feature = "log"))]
+        {
+            let device_info = vk::DeviceCreateInfoBuilder::new()
+                .enabled_extension_names(&required_device_extensions)
+                .enabled_layer_names(&required_device_layers)
+                .queue_create_infos(&queue_infos)
+                .extend_from(&mut device_features);
+
+            device = Some(unsafe {
+                erupt::DeviceLoader::new(&instance, physical_device, &device_info).unwrap()
+            });
+        }
+
+        let device = match device {
+            Some(device) => device,
+            None => {
+                let e =
+                    "Error: Failed to initialize a DeviceLoader. Please, check the enabled features.";
+
+                error!("{e}"); // Using `error!` for the recording in the logs.
+                panic!("{e}");
+            }
+        };
         let graphics_queue = unsafe { device.get_device_queue(queue_family_index, 0) };
 
         //* COMMANDS
@@ -424,10 +534,14 @@ impl Context {
             swapchain,
             graphics_queue,
             device,
-            physical_device,
-            physical_device_properties,
-            surface_format,
+            _physical_device: physical_device,
+            _physical_device_properties: physical_device_properties,
+            _surface_format: surface_format,
             surface,
+            #[cfg(all(
+                any(feature = "no_log", feature = "log"),
+                not(all(feature = "no_log", feature = "log"))
+            ))]
             debug_messenger,
         })
     }
@@ -473,7 +587,7 @@ impl Drop for Context {
     fn drop(&mut self) {
         unsafe {
             let device = &self.device;
-            device.device_wait_idle();
+            device.device_wait_idle().unwrap();
 
             device.destroy_semaphore(self.render_semaphore, None);
             device.destroy_semaphore(self.present_semaphore, None);
@@ -493,6 +607,10 @@ impl Drop for Context {
             device.destroy_swapchain_khr(self.swapchain, None);
             device.destroy_device(None);
 
+            #[cfg(all(
+                any(feature = "no_log", feature = "log"),
+                not(all(feature = "no_log", feature = "log"))
+            ))]
             if let Some(debug_messenger) = self.debug_messenger {
                 self.instance
                     .destroy_debug_utils_messenger_ext(debug_messenger, None);
