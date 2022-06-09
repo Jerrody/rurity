@@ -42,7 +42,9 @@ impl AssetFile {
         ron::ser::to_writer(&mut asset_file, &self).map_err(|err| err.to_string())
     }
 
-    pub fn load_asset_file(path: &str) -> Result<AssetFile, String> {
+    pub fn load_asset_file<T: AsRef<std::path::Path> + ?Sized>(
+        path: &T,
+    ) -> Result<AssetFile, String> {
         use std::fs::File;
 
         let mut asset_file = File::options()
