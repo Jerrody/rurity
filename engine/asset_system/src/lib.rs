@@ -100,6 +100,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn create_new_asset_and_read_it() {
         const NEW_ASSET_FILE_PATH: &str = "src/test_asset_files/new_asset_file.bin";
 
