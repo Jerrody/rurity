@@ -66,7 +66,7 @@ impl AssetFile {
 mod tests {
     use super::*;
 
-    const FILE_PATH: &str = "../src/asset_file.bin";
+    const FILE_PATH: &str = "src/asset_file.bin";
     const CONTENT_OF_ASSET_FILE: &str =
         "(asset_type:Mesh,version:\"0.1.0\",metadata:\"HI\",raw_data:[1,2,3])";
 
