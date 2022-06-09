@@ -26,18 +26,18 @@ impl AssetFile {
     ) -> Result<(), String> {
         use std::fs::File;
 
-        let mut asset_file =
-            File::options()
-                .write(true)
-                .open(path)
-                .or_else(|e| match e.kind() {
-                    std::io::ErrorKind::NotFound => File::create(path)
-                        .map_err(|e| format!("Error: Failed to create an asset file {e:?}")),
-                    e => {
-                        let e = format!("Error: Failed to save an asset file: {e:?}");
-                        Err(e)
-                    }
-                })?;
+        let mut asset_file = File::options()
+            .write(true)
+            .truncate(false)
+            .open(path)
+            .or_else(|e| match e.kind() {
+                std::io::ErrorKind::NotFound => File::create(path)
+                    .map_err(|e| format!("Error: Failed to create an asset file {e:?}")),
+                e => {
+                    let e = format!("Error: Failed to save an asset file: {e:?}");
+                    Err(e)
+                }
+            })?;
 
         ron::ser::to_writer(&mut asset_file, &self).map_err(|err| err.to_string())
     }
@@ -66,7 +66,7 @@ impl AssetFile {
 mod tests {
     use super::*;
 
-    const FILE_PATH: &str = "src/asset_file.bin";
+    const PREPARED_ASSET_FILE_PATH: &str = "src/test_asset_files/asset_file.bin";
     const CONTENT_OF_ASSET_FILE: &str =
         "(asset_type:Mesh,version:\"0.1.0\",metadata:\"HI\",raw_data:[1,2,3])";
 
@@ -80,18 +80,43 @@ mod tests {
             raw_data: vec![1, 2, 3],
         };
 
-        asset_file.save_asset_file(FILE_PATH).unwrap();
+        asset_file
+            .save_asset_file(PREPARED_ASSET_FILE_PATH)
+            .unwrap();
     }
 
     #[test]
     #[cfg_attr(miri, ignore)]
     fn laod_asset_file() {
-        let asset_file = AssetFile::load_asset_file(FILE_PATH).unwrap();
+        let asset_file = AssetFile::load_asset_file(PREPARED_ASSET_FILE_PATH).unwrap();
 
         assert_eq!(
             &ron::to_string(&asset_file).unwrap(),
             CONTENT_OF_ASSET_FILE,
             "Content of the loaded asset file doesn't correspond with expected content."
         );
+    }
+
+    #[test]
+    fn create_new_asset_and_read_it() {
+        const NEW_ASSET_FILE_PATH: &str = "src/test_asset_files/new_asset_file.bin";
+
+        let asset_file = AssetFile {
+            asset_type: AssetType::Mesh,
+            version: "0.1.0".to_string(),
+            metadata: "HI".to_string(),
+            raw_data: vec![1, 2, 3],
+        };
+
+        asset_file.save_asset_file(NEW_ASSET_FILE_PATH).unwrap();
+        let asset_file = AssetFile::load_asset_file(NEW_ASSET_FILE_PATH).unwrap();
+
+        assert_eq!(
+            &ron::to_string(&asset_file).unwrap(),
+            CONTENT_OF_ASSET_FILE,
+            "Content of the loaded asset file doesn't correspond with expected content."
+        );
+
+        std::fs::remove_file(NEW_ASSET_FILE_PATH).unwrap();
     }
 }
