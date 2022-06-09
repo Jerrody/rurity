@@ -28,17 +28,15 @@ impl AssetFile {
                 .write(true)
                 .open(path)
                 .or_else(|e| match e.kind() {
-                    std::io::ErrorKind::NotFound => File::create(path).or_else(|e| {
-                        let e = format!("Error: Failed to create an asset file {e:?}");
-                        Err(e)
-                    }),
+                    std::io::ErrorKind::NotFound => File::create(path)
+                        .map_err(|e| format!("Error: Failed to create an asset file {e:?}")),
                     e => {
                         let e = format!("Error: Failed to save an asset file: {e:?}");
                         Err(e)
                     }
                 })?;
 
-        Ok(ron::ser::to_writer(&mut asset_file, &self).map_err(|err| err.to_string())?)
+        ron::ser::to_writer(&mut asset_file, &self).map_err(|err| err.to_string())
     }
 
     pub fn load_asset_file(path: &str) -> Result<AssetFile, String> {
@@ -48,17 +46,14 @@ impl AssetFile {
             .write(false)
             .read(true)
             .open(path)
-            .or_else(|e| {
-                let e = format!("Error: Failed to save an asset file: {:?}", e.kind());
-                Err(e)
-            })?;
+            .map_err(|e| format!("Error: Failed to save an asset file: {:?}", e.kind()))?;
 
         let mut raw_data = String::new();
         asset_file
             .read_to_string(&mut raw_data)
             .map_err(|e| e.to_string())?;
 
-        let asset_file = ron::de::from_bytes(&raw_data.as_bytes()).map_err(|e| e.to_string())?;
+        let asset_file = ron::de::from_bytes(raw_data.as_bytes()).map_err(|e| e.to_string())?;
 
         Ok(asset_file)
     }
